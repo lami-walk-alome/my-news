@@ -6,9 +6,11 @@
 <title>My News — NYT &amp; The Economist</title>
 <style>
   :root { --bg:#f7f5f0; --ink:#1a1a1a; --muted:#6b6b6b; --line:#e3ded4; --accent:#1a1a1a; --tint:#f1f1f1; }
-  body[data-mode="nyt"] { --accent:#000000; --tint:#f1f1f1; }
-  body[data-mode="eco"] { --accent:#e3120b; --tint:#fdeceb; }
-  body[data-mode="fav"] { --accent:#1f6f54; --tint:#e8f3ee; }
+  body[data-mode="aitech"]  { --accent:#2563eb; --tint:#e8f0fe; }
+  body[data-mode="biz"]     { --accent:#1f6f54; --tint:#e8f3ee; }
+  body[data-mode="scieng"]  { --accent:#7c3aed; --tint:#f1e9fd; }
+  body[data-mode="world"]   { --accent:#000000; --tint:#f1f1f1; }
+  body[data-mode="opinion"] { --accent:#e3120b; --tint:#fdeceb; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:Georgia,"Times New Roman",serif; background:var(--bg); color:var(--ink); line-height:1.5; -webkit-font-smoothing:antialiased; }
   header { border-bottom:2px solid var(--ink); padding:24px 16px 14px; background:var(--bg); position:sticky; top:0; z-index:5; }
@@ -55,11 +57,11 @@
   footer { text-align:center; font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:var(--muted); padding:24px 16px 40px; border-top:1px solid var(--line); }
 </style>
 </head>
-<body data-mode="fav">
+<body data-mode="aitech">
 <header>
   <div class="head-inner">
     <h1>My News</h1>
-    <p>NYT &amp; The Economist · 관심 섹션 큐레이션</p>
+    <p>NYT &amp; The Economist · choose a field</p>
     <div class="pubs" id="pubs"></div>
     <div class="sections" id="sections"></div>
     <div class="bar">
@@ -118,21 +120,13 @@ const FEEDS = {
   eco_1843:  {src:"Eco", label:"1843 magazine",         url:"https://www.economist.com/1843/rss.xml", fallback:"https://www.economist.com/culture/rss.xml"}
 };
 
-// 모드별 표시 구성. 그룹 라벨이 있으면 칩 앞에 헤더 표시.
+// 분야(Field)별 구성. 각 분야는 NYT/Economist 섹션 칩들을 가짐.
 const MODES = {
-  nyt: { name:"NYT", groups:[
-    { label:null, items:["nyt_top","nyt_world","nyt_us","nyt_pol","nyt_biz","nyt_eco","nyt_deal","nyt_tech","nyt_ai","nyt_ptech","nyt_sci","nyt_space","nyt_clim","nyt_health","nyt_sport","nyt_arts","nyt_books","nyt_mag","nyt_op"] }
-  ]},
-  eco: { name:"Economist", groups:[
-    { label:null, items:["eco_latest","eco_week","eco_lead","eco_brief","eco_invite","eco_us","eco_china","eco_asia","eco_eu","eco_brit","eco_intl","eco_biz","eco_fin","eco_sci","eco_cult","eco_1843"] }
-  ]},
-  fav: { name:"⭐ 내 관심", groups:[
-    { label:"AI·기술",        items:["nyt_tech","nyt_ai","eco_sci"] },
-    { label:"경제·경영",      items:["nyt_biz","nyt_eco","nyt_deal","eco_biz","eco_fin"] },
-    { label:"과학·공학",      items:["nyt_sci","nyt_space"] },
-    { label:"세계·정책",      items:["nyt_world","nyt_pol","eco_week","eco_lead","eco_intl"] },
-    { label:"전문가·심층",    items:["eco_invite","nyt_mag","eco_1843","eco_brief"] }
-  ]}
+  aitech:  { name:"AI & Tech",            groups:[ { label:null, items:["nyt_tech","nyt_ai","nyt_ptech","eco_sci"] } ]},
+  biz:     { name:"Business & Economy",   groups:[ { label:null, items:["nyt_biz","nyt_eco","nyt_deal","eco_biz","eco_fin"] } ]},
+  scieng:  { name:"Science & Engineering",groups:[ { label:null, items:["nyt_sci","nyt_space","eco_sci"] } ]},
+  world:   { name:"World & Politics",     groups:[ { label:null, items:["nyt_world","nyt_pol","eco_week","eco_lead","eco_intl"] } ]},
+  opinion: { name:"Opinion & Long-reads", groups:[ { label:null, items:["eco_invite","nyt_mag","eco_1843","eco_brief"] } ]}
 };
 
 const PROXIES = [
@@ -145,7 +139,7 @@ const PROXIES = [
 
 // feedCache[feedId] = {state, items, error}
 const feedCache = {};
-let curMode="fav", curFeed=null, loading=false;
+let curMode="aitech", curFeed=null, loading=false;
 
 function timeAgo(s){ if(!s) return ""; const d=new Date(s); if(isNaN(d)) return ""; const x=(Date.now()-d.getTime())/1000;
   if(x<60) return "방금 전"; if(x<3600) return Math.floor(x/60)+"분 전"; if(x<86400) return Math.floor(x/3600)+"시간 전"; return Math.floor(x/86400)+"일 전"; }
@@ -219,7 +213,7 @@ function renderSections(){
       const dot=document.createElement("span"); dot.className="sdot";
       const st=feedCache[fid]?.state; if(st) dot.classList.add(st);
       b.appendChild(dot);
-      if(curMode==="fav"){ const bd=document.createElement("span"); bd.className="badge "+(f.src==="NYT"?"nyt":"eco"); bd.textContent=f.src; b.appendChild(bd); }
+      const bd=document.createElement("span"); bd.className="badge "+(f.src==="NYT"?"nyt":"eco"); bd.textContent=f.src; b.appendChild(bd);
       const t=document.createElement("span"); t.textContent=f.label; b.appendChild(t);
       b.onclick=()=>{ curFeed=fid; renderSections(); showCurrent(); };
       wrap.appendChild(b);
@@ -239,7 +233,7 @@ function showCurrent(){
     const li=document.createElement("li"); li.className="item";
     const num=document.createElement("div"); num.className="num"; num.textContent=(i+1);
     const body=document.createElement("div"); body.className="body";
-    if(curMode==="fav"){ const s=document.createElement("div"); s.className="src"; s.textContent=(f.src==="NYT"?"NYT · ":"The Economist · ")+f.label; body.appendChild(s); }
+    const s=document.createElement("div"); s.className="src"; s.textContent=(f.src==="NYT"?"NYT · ":"The Economist · ")+f.label; body.appendChild(s);
     const a=document.createElement("a"); a.href=it.link; a.target="_blank"; a.rel="noopener"; a.textContent=it.title; body.appendChild(a);
     if(it.desc){ const d=document.createElement("div"); d.className="desc"; d.textContent=it.desc; body.appendChild(d); }
     const m=document.createElement("div"); m.className="meta"; m.textContent=timeAgo(it.date); if(m.textContent) body.appendChild(m);
