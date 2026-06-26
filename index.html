@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My News — NYT &amp; The Economist</title>
+<style>
+  :root { --bg:#f7f5f0; --ink:#1a1a1a; --muted:#6b6b6b; --line:#e3ded4; --accent:#1a1a1a; --tint:#f1f1f1; }
+  body[data-mode="nyt"] { --accent:#000000; --tint:#f1f1f1; }
+  body[data-mode="eco"] { --accent:#e3120b; --tint:#fdeceb; }
+  body[data-mode="fav"] { --accent:#1f6f54; --tint:#e8f3ee; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:Georgia,"Times New Roman",serif; background:var(--bg); color:var(--ink); line-height:1.5; -webkit-font-smoothing:antialiased; }
+  header { border-bottom:2px solid var(--ink); padding:24px 16px 14px; background:var(--bg); position:sticky; top:0; z-index:5; }
+  .head-inner { max-width:1000px; margin:0 auto; }
+  header h1 { font-size:clamp(24px,5.5vw,38px); letter-spacing:-0.5px; font-weight:700; text-align:center; }
+  header p { color:var(--muted); font-size:13px; margin-top:6px; text-align:center; font-family:-apple-system,system-ui,sans-serif; }
+  .pubs { display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
+  .pub-btn { font-family:-apple-system,system-ui,sans-serif; font-size:14px; font-weight:700; padding:9px 20px; border:1.5px solid var(--ink); background:transparent; color:var(--ink); border-radius:999px; cursor:pointer; transition:.15s; }
+  .pub-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .sections { display:flex; gap:8px; overflow-x:auto; padding:14px 4px 4px; max-width:1000px; margin:0 auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; align-items:center; }
+  .grp-label { font-family:-apple-system,system-ui,sans-serif; font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; padding:0 4px 0 8px; border-left:2px solid var(--line); }
+  .grp-label:first-child { border-left:none; }
+  .sec-btn { font-family:-apple-system,system-ui,sans-serif; font-size:13px; font-weight:600; white-space:nowrap; padding:7px 13px; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; cursor:pointer; transition:.15s; display:flex; align-items:center; gap:7px; }
+  .sec-btn:hover { background:var(--tint); }
+  .sec-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .badge { font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; background:var(--tint); color:var(--muted); }
+  .badge.nyt { background:#e7e7e7; color:#222; }
+  .badge.eco { background:#fbdcda; color:#b3100b; }
+  .sec-btn.active .badge { background:rgba(255,255,255,.25); color:#fff; }
+  .sdot { width:6px; height:6px; border-radius:50%; background:#ccc; flex:0 0 auto; }
+  .sdot.ok { background:#27ae60; } .sdot.err { background:#c0392b; } .sdot.loading { background:#e6a817; animation:pulse 1s infinite; }
+  .sec-btn.active .sdot.ok { background:#fff; }
+  @keyframes pulse { 50%{opacity:.3} }
+  .bar { display:flex; align-items:center; gap:12px; max-width:1000px; margin:10px auto 0; padding:0 4px; }
+  .bar .now { font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:var(--muted); }
+  .refresh { margin-left:auto; font-family:-apple-system,system-ui,sans-serif; font-size:13px; font-weight:600; padding:7px 16px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:999px; cursor:pointer; }
+  .refresh:disabled { opacity:.5; cursor:default; }
+  main { max-width:1000px; margin:0 auto; padding:16px 16px 60px; }
+  ul { list-style:none; }
+  li.item { border-bottom:1px solid var(--line); padding:14px 0; display:flex; gap:14px; }
+  li.item .num { font-family:-apple-system,system-ui,sans-serif; font-size:13px; font-weight:700; color:var(--accent); min-width:26px; padding-top:2px; }
+  li.item .body { min-width:0; }
+  li.item .src { font-family:-apple-system,system-ui,sans-serif; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:3px; }
+  li.item a { color:var(--ink); text-decoration:none; font-size:17px; font-weight:600; display:block; }
+  li.item a:hover { text-decoration:underline; }
+  li.item .desc { font-family:Georgia,serif; font-size:14px; color:#444; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  li.item .meta { font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:var(--muted); margin-top:5px; }
+  .status { font-family:-apple-system,system-ui,sans-serif; font-size:13px; color:var(--muted); padding:24px 4px; text-align:center; }
+  .status.error { color:#c0392b; }
+  .skeleton { height:18px; background:linear-gradient(90deg,#eee,#f5f5f5,#eee); background-size:200% 100%; animation:shimmer 1.2s infinite; border-radius:4px; margin:18px 0; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .progress { height:3px; background:var(--line); border-radius:2px; max-width:1000px; margin:10px auto 0; overflow:hidden; }
+  .progress > i { display:block; height:100%; width:0; background:var(--accent); transition:width .3s; }
+  footer { text-align:center; font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:var(--muted); padding:24px 16px 40px; border-top:1px solid var(--line); }
+</style>
+</head>
+<body data-mode="fav">
+<header>
+  <div class="head-inner">
+    <h1>My News</h1>
+    <p>NYT &amp; The Economist · 관심 섹션 큐레이션</p>
+    <div class="pubs" id="pubs"></div>
+    <div class="sections" id="sections"></div>
+    <div class="bar">
+      <span class="now" id="now"></span>
+      <button class="refresh" id="refreshBtn">전체 새로고침</button>
+    </div>
+    <div class="progress"><i id="progbar"></i></div>
+  </div>
+</header>
+
+<main>
+  <div id="list"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+</main>
+
+<footer>제목·요약·링크는 각 매체 공식 RSS에서 가져옵니다. 전문은 해당 매체에서 확인하세요.</footer>
+
+<script>
+// 피드 정의: id -> {src:'NYT'|'Eco', label, url, fallback?}
+const FEEDS = {
+  // NYT
+  nyt_top:   {src:"NYT", label:"Top Stories",  url:"https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"},
+  nyt_world: {src:"NYT", label:"World",         url:"https://rss.nytimes.com/services/xml/rss/nyt/World.xml"},
+  nyt_us:    {src:"NYT", label:"US",            url:"https://rss.nytimes.com/services/xml/rss/nyt/US.xml"},
+  nyt_pol:   {src:"NYT", label:"Politics",      url:"https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml"},
+  nyt_biz:   {src:"NYT", label:"Business",      url:"https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"},
+  nyt_eco:   {src:"NYT", label:"Economy",       url:"https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml"},
+  nyt_deal:  {src:"NYT", label:"DealBook",      url:"https://rss.nytimes.com/services/xml/rss/nyt/Dealbook.xml", fallback:"https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"},
+  nyt_tech:  {src:"NYT", label:"Technology",    url:"https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"},
+  nyt_ai:    {src:"NYT", label:"AI",            url:"https://rss.nytimes.com/services/xml/rss/nyt/ArtificialIntelligence.xml", fallback:"https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"},
+  nyt_ptech: {src:"NYT", label:"Personal Tech", url:"https://rss.nytimes.com/services/xml/rss/nyt/PersonalTech.xml", fallback:"https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"},
+  nyt_sci:   {src:"NYT", label:"Science",       url:"https://rss.nytimes.com/services/xml/rss/nyt/Science.xml"},
+  nyt_space: {src:"NYT", label:"Space",         url:"https://rss.nytimes.com/services/xml/rss/nyt/Space.xml", fallback:"https://rss.nytimes.com/services/xml/rss/nyt/Science.xml"},
+  nyt_clim:  {src:"NYT", label:"Climate",       url:"https://rss.nytimes.com/services/xml/rss/nyt/Climate.xml"},
+  nyt_health:{src:"NYT", label:"Health",        url:"https://rss.nytimes.com/services/xml/rss/nyt/Health.xml"},
+  nyt_sport: {src:"NYT", label:"Sports",        url:"https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml"},
+  nyt_arts:  {src:"NYT", label:"Arts",          url:"https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml"},
+  nyt_books: {src:"NYT", label:"Books",         url:"https://rss.nytimes.com/services/xml/rss/nyt/Books.xml"},
+  nyt_mag:   {src:"NYT", label:"Magazine",      url:"https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml"},
+  nyt_op:    {src:"NYT", label:"Opinion",       url:"https://rss.nytimes.com/services/xml/rss/nyt/Opinion.xml"},
+  // Economist
+  eco_latest:{src:"Eco", label:"Latest",                url:"https://www.economist.com/latest/rss.xml"},
+  eco_week:  {src:"Eco", label:"The world this week",   url:"https://www.economist.com/the-world-this-week/rss.xml"},
+  eco_lead:  {src:"Eco", label:"Leaders",               url:"https://www.economist.com/leaders/rss.xml"},
+  eco_brief: {src:"Eco", label:"Briefing",              url:"https://www.economist.com/briefing/rss.xml"},
+  eco_invite:{src:"Eco", label:"By Invitation",         url:"https://www.economist.com/by-invitation/rss.xml", fallback:"https://www.economist.com/leaders/rss.xml"},
+  eco_us:    {src:"Eco", label:"United States",         url:"https://www.economist.com/united-states/rss.xml"},
+  eco_china: {src:"Eco", label:"China",                 url:"https://www.economist.com/china/rss.xml"},
+  eco_asia:  {src:"Eco", label:"Asia",                  url:"https://www.economist.com/asia/rss.xml"},
+  eco_eu:    {src:"Eco", label:"Europe",                url:"https://www.economist.com/europe/rss.xml"},
+  eco_brit:  {src:"Eco", label:"Britain",               url:"https://www.economist.com/britain/rss.xml"},
+  eco_intl:  {src:"Eco", label:"International",          url:"https://www.economist.com/international/rss.xml"},
+  eco_biz:   {src:"Eco", label:"Business",              url:"https://www.economist.com/business/rss.xml"},
+  eco_fin:   {src:"Eco", label:"Finance & economics",   url:"https://www.economist.com/finance-and-economics/rss.xml"},
+  eco_sci:   {src:"Eco", label:"Science & technology",  url:"https://www.economist.com/science-and-technology/rss.xml"},
+  eco_cult:  {src:"Eco", label:"Culture",               url:"https://www.economist.com/culture/rss.xml"},
+  eco_1843:  {src:"Eco", label:"1843 magazine",         url:"https://www.economist.com/1843/rss.xml", fallback:"https://www.economist.com/culture/rss.xml"}
+};
+
+// 모드별 표시 구성. 그룹 라벨이 있으면 칩 앞에 헤더 표시.
+const MODES = {
+  nyt: { name:"NYT", groups:[
+    { label:null, items:["nyt_top","nyt_world","nyt_us","nyt_pol","nyt_biz","nyt_eco","nyt_deal","nyt_tech","nyt_ai","nyt_ptech","nyt_sci","nyt_space","nyt_clim","nyt_health","nyt_sport","nyt_arts","nyt_books","nyt_mag","nyt_op"] }
+  ]},
+  eco: { name:"Economist", groups:[
+    { label:null, items:["eco_latest","eco_week","eco_lead","eco_brief","eco_invite","eco_us","eco_china","eco_asia","eco_eu","eco_brit","eco_intl","eco_biz","eco_fin","eco_sci","eco_cult","eco_1843"] }
+  ]},
+  fav: { name:"⭐ 내 관심", groups:[
+    { label:"AI·기술",        items:["nyt_tech","nyt_ai","eco_sci"] },
+    { label:"경제·경영",      items:["nyt_biz","nyt_eco","nyt_deal","eco_biz","eco_fin"] },
+    { label:"과학·공학",      items:["nyt_sci","nyt_space"] },
+    { label:"세계·정책",      items:["nyt_world","nyt_pol","eco_week","eco_lead","eco_intl"] },
+    { label:"전문가·심층",    items:["eco_invite","nyt_mag","eco_1843","eco_brief"] }
+  ]}
+};
+
+const PROXIES = [
+  { kind:"json-items",    build:u=>"https://api.rss2json.com/v1/api.json?count=30&rss_url="+encodeURIComponent(u) },
+  { kind:"raw",           build:u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u) },
+  { kind:"json-contents", build:u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u) },
+  { kind:"raw",           build:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u) },
+  { kind:"raw",           build:u=>"https://corsproxy.io/?url="+encodeURIComponent(u) }
+];
+
+// feedCache[feedId] = {state, items, error}
+const feedCache = {};
+let curMode="fav", curFeed=null, loading=false;
+
+function timeAgo(s){ if(!s) return ""; const d=new Date(s); if(isNaN(d)) return ""; const x=(Date.now()-d.getTime())/1000;
+  if(x<60) return "방금 전"; if(x<3600) return Math.floor(x/60)+"분 전"; if(x<86400) return Math.floor(x/3600)+"시간 전"; return Math.floor(x/86400)+"일 전"; }
+function stripHtml(h){ if(!h) return ""; const t=document.createElement("div"); t.innerHTML=h; return (t.textContent||"").trim(); }
+function bust(url){ return url+(url.includes("?")?"&":"?")+"_t="+Date.now(); }
+
+function parseXml(xml){
+  const doc=new DOMParser().parseFromString(xml,"text/xml");
+  return [...doc.querySelectorAll("item, entry")].map(it=>{
+    const title=(it.querySelector("title")?.textContent||"").trim();
+    let link=it.querySelector("link")?.textContent?.trim();
+    if(!link) link=it.querySelector("link")?.getAttribute("href")||"";
+    const date=it.querySelector("pubDate, published, updated")?.textContent||"";
+    const desc=stripHtml(it.querySelector("description, summary, content")?.textContent||"");
+    return {title,link,date,desc};
+  }).filter(x=>x.title&&x.link);
+}
+
+async function fetchOne(feedUrl){
+  let lastErr=null;
+  for(const p of PROXIES){
+    try{
+      const res=await fetch(p.build(bust(feedUrl)),{cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      let items=[];
+      if(p.kind==="json-items"){
+        const d=await res.json();
+        if(d.status!=="ok"||!d.items) throw new Error("bad json");
+        items=d.items.map(x=>({title:x.title,link:x.link,date:x.pubDate,desc:stripHtml(x.description||"")}));
+      } else if(p.kind==="json-contents"){
+        const d=await res.json(); if(!d.contents) throw new Error("no contents");
+        items=parseXml(d.contents);
+      } else { items=parseXml(await res.text()); }
+      if(items.length) return items.slice(0,30);
+      throw new Error("empty");
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr||new Error("all proxies failed");
+}
+
+async function fetchFeed(feedId){
+  const f=FEEDS[feedId];
+  try { return await fetchOne(f.url); }
+  catch(e){
+    if(f.fallback){ try { return await fetchOne(f.fallback); } catch(_){} }
+    throw e;
+  }
+}
+
+function renderPubs(){
+  const wrap=document.getElementById("pubs"); wrap.innerHTML="";
+  Object.entries(MODES).forEach(([key,m])=>{
+    const b=document.createElement("button");
+    b.className="pub-btn"+(key===curMode?" active":"");
+    b.textContent=m.name;
+    b.onclick=()=>{ curMode=key; document.body.dataset.mode=key; curFeed=firstFeedOf(key); renderPubs(); renderSections(); showCurrent(); };
+    wrap.appendChild(b);
+  });
+}
+
+function firstFeedOf(mode){ return MODES[mode].groups[0].items[0]; }
+
+function renderSections(){
+  const wrap=document.getElementById("sections"); wrap.innerHTML="";
+  MODES[curMode].groups.forEach(g=>{
+    if(g.label){ const l=document.createElement("span"); l.className="grp-label"; l.textContent=g.label; wrap.appendChild(l); }
+    g.items.forEach(fid=>{
+      const f=FEEDS[fid];
+      const b=document.createElement("button");
+      b.className="sec-btn"+(fid===curFeed?" active":"");
+      const dot=document.createElement("span"); dot.className="sdot";
+      const st=feedCache[fid]?.state; if(st) dot.classList.add(st);
+      b.appendChild(dot);
+      if(curMode==="fav"){ const bd=document.createElement("span"); bd.className="badge "+(f.src==="NYT"?"nyt":"eco"); bd.textContent=f.src; b.appendChild(bd); }
+      const t=document.createElement("span"); t.textContent=f.label; b.appendChild(t);
+      b.onclick=()=>{ curFeed=fid; renderSections(); showCurrent(); };
+      wrap.appendChild(b);
+    });
+  });
+}
+
+function showCurrent(){
+  const list=document.getElementById("list");
+  const f=FEEDS[curFeed];
+  const entry=feedCache[curFeed];
+  if(!entry || entry.state==="idle"){ list.innerHTML='<div class="status">대기 중…</div>'; return; }
+  if(entry.state==="loading"){ list.innerHTML='<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>'; return; }
+  if(entry.state==="err"){ list.innerHTML='<div class="status error">불러오기 실패: '+(entry.error||"오류")+'<br>전체 새로고침을 눌러 다시 시도하세요.</div>'; return; }
+  const ul=document.createElement("ul");
+  entry.items.forEach((it,i)=>{
+    const li=document.createElement("li"); li.className="item";
+    const num=document.createElement("div"); num.className="num"; num.textContent=(i+1);
+    const body=document.createElement("div"); body.className="body";
+    if(curMode==="fav"){ const s=document.createElement("div"); s.className="src"; s.textContent=(f.src==="NYT"?"NYT · ":"The Economist · ")+f.label; body.appendChild(s); }
+    const a=document.createElement("a"); a.href=it.link; a.target="_blank"; a.rel="noopener"; a.textContent=it.title; body.appendChild(a);
+    if(it.desc){ const d=document.createElement("div"); d.className="desc"; d.textContent=it.desc; body.appendChild(d); }
+    const m=document.createElement("div"); m.className="meta"; m.textContent=timeAgo(it.date); if(m.textContent) body.appendChild(m);
+    li.appendChild(num); li.appendChild(body); ul.appendChild(li);
+  });
+  list.innerHTML=""; list.appendChild(ul);
+}
+
+async function runPool(tasks, limit){
+  let idx=0, done=0; const total=tasks.length;
+  async function worker(){ while(idx<tasks.length){ const my=idx++; await tasks[my](); done++; document.getElementById("progbar").style.width=Math.round(done/total*100)+"%"; } }
+  await Promise.all(Array.from({length:Math.min(limit,total)}, worker));
+}
+
+async function loadAll(){
+  if(loading) return; loading=true;
+  const btn=document.getElementById("refreshBtn"); btn.disabled=true;
+  document.getElementById("progbar").style.width="0%";
+  const tasks=[];
+  Object.keys(FEEDS).forEach(fid=>{
+    feedCache[fid]={state:"loading",items:[],error:""};
+    tasks.push(async()=>{
+      try { feedCache[fid]={state:"ok",items:await fetchFeed(fid),error:""}; }
+      catch(e){ feedCache[fid]={state:"err",items:[],error:e.message||"오류"}; }
+      renderSections();
+      if(fid===curFeed) showCurrent();
+    });
+  });
+  renderSections(); showCurrent();
+  document.getElementById("now").textContent="모든 섹션 불러오는 중…";
+  await runPool(tasks, 4);
+  const t=new Date();
+  document.getElementById("now").textContent="전체 갱신: "+t.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("progbar").style.width="100%";
+  setTimeout(()=>{ document.getElementById("progbar").style.width="0%"; },800);
+  renderSections(); showCurrent();
+  btn.disabled=false; loading=false;
+}
+
+document.getElementById("refreshBtn").addEventListener("click", loadAll);
+curFeed=firstFeedOf(curMode);
+renderPubs(); renderSections(); loadAll();
+</script>
+</body>
+</html>
