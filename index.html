@@ -156,6 +156,17 @@ function timeAgo(s){ if(!s) return ""; const d=new Date(s); if(isNaN(d)) return 
   if(x<60) return "방금 전"; if(x<3600) return Math.floor(x/60)+"분 전"; if(x<86400) return Math.floor(x/3600)+"시간 전"; return Math.floor(x/86400)+"일 전"; }
 function stripHtml(h){ if(!h) return ""; const t=document.createElement("div"); t.innerHTML=h; return (t.textContent||"").trim(); }
 function bust(url){ return url+(url.includes("?")?"&":"?")+"_t="+Date.now(); }
+function sortByDate(items){
+  return items.map((it,i)=>({it,i,t:Date.parse(it.date)}))
+    .sort((a,b)=>{
+      const av=isNaN(a.t), bv=isNaN(b.t);
+      if(av&&bv) return a.i-b.i;   // 둘 다 날짜 없음 → 원래 순서
+      if(av) return 1;            // 날짜 없는 건 뒤로
+      if(bv) return -1;
+      return b.t-a.t;             // 최신순
+    })
+    .map(x=>x.it);
+}
 
 function parseXml(xml){
   const doc=new DOMParser().parseFromString(xml,"text/xml");
@@ -184,7 +195,7 @@ async function fetchOne(feedUrl){
         const d=await res.json(); if(!d.contents) throw new Error("no contents");
         items=parseXml(d.contents);
       } else { items=parseXml(await res.text()); }
-      if(items.length) return items.slice(0,30);
+      if(items.length) return sortByDate(items).slice(0,30);
       throw new Error("empty");
     }catch(e){ lastErr=e; }
   }
