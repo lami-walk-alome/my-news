@@ -61,7 +61,7 @@
   footer { text-align:center; font-family:-apple-system,system-ui,sans-serif; font-size:12px; color:var(--muted); padding:24px 16px 40px; border-top:1px solid var(--line); }
 </style>
 </head>
-<body data-mode="topnews">
+<body data-mode="aitech">
 <header>
   <div class="head-inner">
     <h1>My News</h1>
@@ -137,17 +137,13 @@ const FEEDS = {
   eco_1843:  {src:"Eco", label:"1843 magazine",         url:"https://www.economist.com/1843/rss.xml", fallback:"https://www.economist.com/culture/rss.xml"}
 };
 
-// 분야(Field)별 구성. 각 섹션은 한 분야에만 속함(중복 없음).
+// 분야(Field) 5개. 각 섹션은 한 분야에만 속함(중복 없음).
 const MODES = {
-  aitech:  { name:"AI & Tech",             groups:[ { label:null, items:["nyt_tech","nyt_ai","eco_sci"] } ]},
+  aitech:  { name:"AI & Tech",             groups:[ { label:null, items:["nyt_tech","nyt_ai"] } ]},
   biz:     { name:"Business & Economy",    groups:[ { label:null, items:["nyt_biz","nyt_eco","nyt_realest","eco_biz","eco_fin","eco_indic"] } ]},
-  science: { name:"Science & Climate",     groups:[ { label:null, items:["nyt_sci","nyt_clim","nyt_health","nyt_well"] } ]},
-  world:   { name:"World",                 groups:[ { label:null, items:["nyt_world","eco_week","eco_intl","eco_china","eco_asia","eco_eu","eco_mea","eco_amer","eco_brit"] } ]},
-  politics:{ name:"U.S. & Politics",       groups:[ { label:null, items:["nyt_us","nyt_pol","nyt_ny","nyt_edu","eco_us"] } ]},
-  opinion: { name:"Opinion & Long-reads",  groups:[ { label:null, items:["nyt_op","eco_lead","eco_invite","eco_brief","nyt_mag","eco_1843"] } ]},
-  culture: { name:"Culture & Arts",        groups:[ { label:null, items:["nyt_arts","nyt_books","nyt_movies","nyt_music","nyt_tv","nyt_pop","eco_cult","eco_obit"] } ]},
-  life:    { name:"Life & Style",          groups:[ { label:null, items:["nyt_style","nyt_food","nyt_travel","nyt_sport"] } ]},
-  topnews: { name:"Top Stories",           groups:[ { label:null, items:["nyt_top","eco_latest"] } ]}
+  scieng:  { name:"Science & Engineering", groups:[ { label:null, items:["nyt_sci","nyt_health","eco_sci"] } ]},
+  world:   { name:"World & Politics",      groups:[ { label:null, items:["nyt_world","nyt_us","nyt_pol","nyt_edu","eco_week","eco_intl","eco_us","eco_china","eco_asia","eco_eu"] } ]},
+  opinion: { name:"Opinion & Long-reads",  groups:[ { label:null, items:["nyt_op","nyt_mag","eco_lead","eco_invite","eco_brief","eco_1843"] } ]}
 };
 
 const PROXIES = [
@@ -160,7 +156,7 @@ const PROXIES = [
 
 // feedCache[feedId] = {state, items, error}
 const feedCache = {};
-let curMode="topnews", curFeed=null, loading=false;
+let curMode="aitech", curFeed=null, loading=false;
 
 function timeAgo(s){ if(!s) return ""; const d=new Date(s); if(isNaN(d)) return ""; const x=(Date.now()-d.getTime())/1000;
   if(x<60) return "방금 전"; if(x<3600) return Math.floor(x/60)+"분 전"; if(x<86400) return Math.floor(x/3600)+"시간 전"; return Math.floor(x/86400)+"일 전"; }
